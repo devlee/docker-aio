@@ -1,0 +1,2 @@
+worker:
+  image: jordan0day/folding-at-home

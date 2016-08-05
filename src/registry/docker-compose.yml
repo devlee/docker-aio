@@ -1,0 +1,34 @@
+version: '2'
+services:
+  nginx:
+    restart: always
+    image: 'nginx:latest'
+    ports:
+      - 443:443
+    links:
+      - registry:registry
+    volumes:
+      - ./nginx/:/etc/nginx/conf.d
+    container_name: 'docker-registry-proxy'
+  registry:
+    restart: always
+    image: 'registry:2.4.1'
+    ports:
+      - 5000:5000
+    environment:
+      - REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data
+    volumes:
+      - ./data:/data
+    container_name: 'docker-registry'
+  frontend:
+    restart: always
+    image: 'konradkleine/docker-registry-frontend:v2'
+    ports:
+      - 8080:80
+    environment:
+      - ENV_DOCKER_REGISTRY_HOST=nginx
+      - ENV_DOCKER_REGISTRY_PORT=443
+      - ENV_DOCKER_REGISTRY_USE_SSL=1
+    links:
+      - nginx:nginx
+    container_name: 'docker-registry-frontend'
