@@ -348,45 +348,45 @@ Docker On Ubuntu
 4. 创建registry.conf文件，并写入以下代码
 
 	```
-	    upstream docker-hub {
-	      server registry:5000;
-	    }
-	
-	    server {
-	      listen 443;
-	      server_name localhost;
-	
-	      # SSL
-	      ssl on;
-	      ssl_certificate /etc/nginx/conf.d/docker-registry.crt;
-	      ssl_certificate_key /etc/nginx/conf.d/docker-registry.key;
-	
-	      # disable any limits to avoid HTTP 413 for large image uploads
-	      client_max_body_size 0;
-	
-	      # required to avoid HTTP 411: see Issue #1486 (https://github.com/docker/docker/issues/1486)
-	      chunked_transfer_encoding on;
-	
-	      location /v2/ {
-	        # Do not allow connections from docker 1.5 and earlier
-	        # docker pre-1.6.0 did not properly set the user agent on ping, catch "Go *" user agents
-	        if ($http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*$" ) {
-	        return 404;
-	        }
-	
-	        # To add basic authentication to v2 use auth_basic setting plus add_header
-	        auth_basic "registry.localhost";
-	        auth_basic_user_file /etc/nginx/conf.d/docker-registry.htpasswd;
-	        add_header 'Docker-Distribution-Api-Version' 'registry/2.4.1' always;
-	
-	        proxy_pass http://docker-hub;
-	        proxy_set_header Host $http_host; # required for docker client's sake
-	        proxy_set_header X-Real-IP $remote_addr; # pass on real client's IP
-	        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-	        proxy_set_header X-Forwarded-Proto $scheme;
-	        proxy_read_timeout 900;
-	      }
-	    }
+    upstream docker-hub {
+      server registry:5000;
+    }
+
+    server {
+      listen 443;
+      server_name localhost;
+
+      # SSL
+      ssl on;
+      ssl_certificate /etc/nginx/conf.d/docker-registry.crt;
+      ssl_certificate_key /etc/nginx/conf.d/docker-registry.key;
+
+      # disable any limits to avoid HTTP 413 for large image uploads
+      client_max_body_size 0;
+
+      # required to avoid HTTP 411: see Issue #1486 (https://github.com/docker/docker/issues/1486)
+      chunked_transfer_encoding on;
+
+      location /v2/ {
+        # Do not allow connections from docker 1.5 and earlier
+        # docker pre-1.6.0 did not properly set the user agent on ping, catch "Go *" user agents
+        if ($http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*$" ) {
+        return 404;
+        }
+
+        # To add basic authentication to v2 use auth_basic setting plus add_header
+        auth_basic "registry.localhost";
+        auth_basic_user_file /etc/nginx/conf.d/docker-registry.htpasswd;
+        add_header 'Docker-Distribution-Api-Version' 'registry/2.4.1' always;
+
+        proxy_pass http://docker-hub;
+        proxy_set_header Host $http_host; # required for docker client's sake
+        proxy_set_header X-Real-IP $remote_addr; # pass on real client's IP
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 900;
+      }
+    }
 	```
 
 5. 生成 **`ssl`** 证书
@@ -425,37 +425,50 @@ Docker On Ubuntu
 
 10. 在 **`其他主机`** 上配置证书 （内网配置，如果仓库在外网，不用配置hosts）
 	a. 配置 **`/etc/hosts`** ，假设 **`主机ip`** 为 **`10.12.30.52`** ，写入
+
 	> 10.12.30.52 docker-registry
 
 	b. 启动**Docker**服务
+
 	```
 	$ sudo service docker start
 	```
+
 	c. 创建扩展证书存放目录
+
 	```
 	$ sudo mkdir /usr/share/ca-certificates/extra
 	```
+
 	d. 拷贝 **`主机`** 中的 **`docker-registry.crt`** 文件至上述目录
-    	e. 注册证书
+
+    e. 注册证书
+
 	```
 	$ sudo dpkg-reconfigure ca-certificates
 	```
+
 11. 在 **`其他主机`** 上配置证书（方法2）
 	a. 配置 **`/etc/hosts`** ，假设 **`主机ip`** 为 **`10.12.30.52`** ，写入
+
 	> 10.12.30.52 docker-registry
 
 	b. 创建目录
+
 	```
 	$ sudo cd /etc/docker && mkdir cert.d && cd cert.d && mkdir docker-registry:443
 	```
 
 	c. 拷贝 **`主机`** 中的 **`docker-registry.crt`** 文件至上述最后一个创建的目录
-    	d. 重启**Docker**服务
+
+    d. 重启**Docker**服务
+
 	```
 	$ sudo service docker restart
 	```
 
 12. 推送测试
+
 	```
 	$ sudo docker tag hello-world docker-registry:443/hello
 	$ sudo docker push docker-registry:443/hello
