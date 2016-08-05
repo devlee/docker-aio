@@ -32,7 +32,9 @@ Docker On Ubuntu
 
 ###更新APT资源列表
 a. 在 **`主机`** 上使用 **`root`** 权限或 **`sudo`** 命令来执行以下命令
+
 b. 打开一个 **`terminal`**
+
 c. 更新包信息，确保 **`APT`** 使用 **`https`** 方式工作且安装了 **`CA`** 证书
 ```
 $ sudo apt-get update
@@ -77,6 +79,7 @@ $ sudo apt-get upgrade
 
 ###ubuntu安装docker之前的准备
 a. 在 **`主机`** 上打开一个 **`terminal`**
+
 b. 更新包管理器
 ```
 $ sudo apt-get update
@@ -88,6 +91,7 @@ $ sudo apt-get install linux-image-extra-$(uname -r)
 
 ###安装docker
 a. 在 **`主机`** 上使用 **`sudo`** 
+
 b. 更新 **`APT`** 包索引
 ```
 $ sudo apt-get update
