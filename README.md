@@ -131,6 +131,7 @@ chmod +x /usr/local/bin/docker-machine
 ```
 ###校验一下版本信息
 > **NOTE:**
+>
 > a. 执行以下命令
 > ```
 > docker version
