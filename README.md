@@ -60,19 +60,25 @@ Docker On Ubuntu
 
 ### 准备工作
 1. 创建好 **`工作目录`**
+
 	```
 	$ sudo mkdir /work/devlee
 	```
-> **Tip:** 准备工作到第一步就可以了，因为后续步骤会创建若干目录及文件，如果你想偷懒，不愿意一步一步创建这些目录及文件，可以继续准备工作的后续几步。
+
+	> **Tip:** 准备工作到第一步就可以了，因为后续步骤会创建若干目录及文件，如果你想偷懒，不愿意一步一步创建这些目录及文件，可以继续准备工作的后续几步。
 
 2. 进入**`工作目录`**并拉取**`我的项目`**，该项目中拥有一些我们下面操作中需要的文件
+
 	```
 	$ sudo cd /work/devlee && git clone https://github.com/devlee/docker-aio.git
 	```
+
 3. 将项目中src中的所有文件夹拷贝至**`工作目录`**下
+
 	```
 	$ sudo cp -r /work/devlee/docker-aio/src /work/devlee
 	```
+
 4. 此时查看**`工作目录`**，应该拥有 **`gitlab`**，**`registry`**，**`machine`**等文件夹
 
 
@@ -82,16 +88,21 @@ Docker On Ubuntu
 2. 打开一个 **`terminal`**
 
 3. 更新包信息，确保 **`APT`** 使用 **`https`** 方式工作且安装了 **`CA`** 证书
+
 	```
 	$ sudo apt-get update
 	```
+
 	```
 	$ sudo apt-get install apt-transport-https ca-certificates
 	```
+
 4. 添加新的 **`GPG`** key
+
 	```
 	$ sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
 	```
+
 5. 使用你最喜欢的编辑器来打开以下文件，不存在则创建它
 > /etc/apt/sources.list.d/docker.list
 
@@ -105,31 +116,42 @@ Docker On Ubuntu
 	```
 
 8. 更新 **`APT`** 包索引
+
 	```
 	$ sudo apt-get update
 	```
+
 9. 如果存在则先卸载旧有版本
+
 	```
 	$ sudo apt-get purge lxc-docker
 	```
+
 10. 验证 **`APT`** 从正确的仓库中拉取
+
 	```
 	$ sudo apt-cache policy docker-engine
 	```
+
 11. 执行以下命令，获取软件最新版本
+
 	```
 	$ sudo apt-get upgrade
 	```
+
 > **Tip:** `upgrade` 命令会更新所有软件包
 
 ### ubuntu安装docker之前的准备
 1. 在 **`主机`** 上打开一个 **`terminal`**
 
 2. 更新包管理器
+
 	```
 	$ sudo apt-get update
 	```
+
 3. 安装推荐的包
+
 	```
 	$ sudo apt-get install linux-image-extra-$(uname -r)
 	```
@@ -138,31 +160,41 @@ Docker On Ubuntu
 1. 在 **`主机`** 上使用 **`sudo`**
 
 2. 更新 **`APT`** 包索引
+
 	```
 	$ sudo apt-get update
 	```
+
 3. 安装 **`docker`**
+
 	```
 	$ sudo apt-get install docker-engine
 	```
+
 4. 启动 **`docker`** daemon
+
 	```
 	$ sudo service docker start
 	```
+
 5. 验证 **`docker`** 安装正确
+
 	```
 	$ sudo docker run hello-world
 	```
-> **Tip:** 这个命令会下载一个测试镜像并在容器中运行它，当容器运行时，它会在控制台打印出一条消息，随后便会结束退出。
+
+	> **Tip:** 这个命令会下载一个测试镜像并在容器中运行它，当容器运行时，它会在控制台打印出一条消息，随后便会结束退出。
 
 ### 安装docker compose
 1. 打开以下链接
 > https://github.com/docker/compose/releases
 
 2. 在页面中找到这样的命令并运行
+
 	```
 	curl -L https://github.com/docker/compose/releases/download/1.8.0-rc2/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
 	```
+
 	```
 	chmod +x /usr/local/bin/docker-compose
 	```
@@ -234,17 +266,21 @@ Docker On Ubuntu
 
 ### 搭建私有的gitlab
 1. 进入**`工作目录`**，创建文件夹**`gitlab`**，并进入该目录
+
 	```
 	$ sudo cd /work/devlee && mkdir gitlab && cd gitlab
 	```
+
 2. 创建docker-compose.yml，并将以下链接中的代码拷贝至该文件中
 > https://raw.githubusercontent.com/sameersbn/docker-gitlab/master/docker-compose.yml
 > **Tip:** 与我的项目中的文件内容有些许差异，主要是**镜像版本号**和**容器** **`container_name`** 的定义
 
 3. 执行以下命令
+
 	```
 	$ sudo docker-compose up -d
 	```
+
 4. 搭建完成，访问以下地址进行初始化并重置 **`root`** 密码
 > http://localhost:10080
 
