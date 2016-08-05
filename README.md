@@ -287,8 +287,11 @@ Docker On Ubuntu
 
 ### 搭建私有的docker registry
 > **Tip:**
+
 > 1. 这里的 **`registry`** 版本为 **`v2`** ，隶属于 **`docker distribution`** 项目，项目地址为：https://github.com/docker/distribution
+
 > 2. 我们同时会利用 **`nginx`** 来实现 **`https`** 仓库
+
 > 3. 我们会使用 **`docker-registry-frontend`** 来作为web前端展示
 
 1. 进入**`工作目录`**，创建文件夹**`registry`**，并进入该目录
