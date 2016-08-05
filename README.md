@@ -46,9 +46,10 @@ Docker On Ubuntu
 > **相关说明:**
 
 > - 大多数命令需要root权限，可以通过以下命令来解决每次都需要sudo的步骤
-> ```
-> $ sudo -i
-> ```
+
+> 	```
+> 	$ sudo -i
+> 	```
 
 > **工作目录:**
 
@@ -139,7 +140,7 @@ Docker On Ubuntu
 	$ sudo apt-get upgrade
 	```
 
-> **Tip:** `upgrade` 命令会更新所有软件包
+	> **Tip:** `upgrade` 命令会更新所有软件包
 
 ### ubuntu安装docker之前的准备
 1. 在 **`主机`** 上打开一个 **`terminal`**
