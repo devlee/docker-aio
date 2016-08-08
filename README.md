@@ -600,7 +600,9 @@ Docker On Ubuntu
 9. 创建 **`.dockerignore`** ，内容如下
 
 	> .git
+	>
 	> .gitlab-ci.yml
+	>
 	> README.md
 
 10. 创建 **`.gitignore`** ，内容如下
