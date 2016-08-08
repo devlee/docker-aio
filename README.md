@@ -473,3 +473,200 @@ Docker On Ubuntu
 	$ sudo docker tag hello-world docker-registry:443/hello
 	$ sudo docker push docker-registry:443/hello
 	```
+
+### 搭建gitlab-runner
+1. 向 **`/work/devlee/gitlab/docker-compose.yml`** 添加以下代码
+
+		runner-docker-in-docker:
+            restart: always
+            image: sameersbn/gitlab-ci-multi-runner:latest
+            depends_on:
+            	- gitlab
+            volumes:
+            	- /srv/docker/gitlab-runner/docker-in-docker:/home/gitlab_ci_multi_runner/data
+            links:
+            	- gitlab:gitlab
+            environment:
+                - CI_SERVER_URL=http://<gitlab-ip>:10080/ci
+                - RUNNER_TOKEN=<gitlab-token>
+                - RUNNER_DESCRIPTION=docker-in-docker-runner
+                - RUNNER_EXECUTOR=docker
+                - DOCKER_IMAGE=docker:latest
+                - DOCKER_PRIVILEGED=true
+                - DOCKER_EXTRA_HOSTS=localhost:<registry-ip>
+            container_name: gitlab-runner-docker-in-docker
+
+        runner-docker-socket-binding:
+            restart: always
+            image: sameersbn/gitlab-ci-multi-runner:latest
+            depends_on:
+            	- gitlab
+            volumes:
+                - /srv/docker/gitlab-runner/docker-socket-binding:/home/gitlab_ci_multi_runner/data
+                - /var/run/docker.sock:/var/run/docker.sock
+                - /git/devlee/registry/nginx/volumes:/etc/docker/cert.d
+            links:
+            	- gitlab:gitlab
+            environment:
+                - CI_SERVER_URL=http://<gitlab-ip>:10080/ci
+                - RUNNER_TOKEN=<gitlab-token>
+                - RUNNER_DESCRIPTION=docker-socket-binding-runner
+                - RUNNER_EXECUTOR=docker
+                - DOCKER_IMAGE=docker:latest
+                - DOCKER_EXTRA_HOSTS=localhost:<registry-ip>
+                - DOCKER_VOLUMES=/git/devlee/registry/nginx/volumes:/etc/docker/cert.d
+            container_name: gitlab-runner-docker-socket-binding
+            extra_hosts:
+                - "localhost:172.17.0.1"
+                - "docker-registry:172.17.0.1"
+
+        runner-shell:
+            restart: always
+            image: sameersbn/gitlab-ci-multi-runner:latest
+            depends_on:
+            	- gitlab
+            volumes:
+            	- /srv/docker/gitlab-runner/shell:/home/gitlab_ci_multi_runner/data
+            links:
+            	- gitlab:gitlab
+            environment:
+                - CI_SERVER_URL=http://<gitlab-ip>:10080/ci
+                - RUNNER_TOKEN=<gitlab-token>
+                - RUNNER_DESCRIPTION=shell-runner
+                - RUNNER_EXECUTOR=shell
+            container_name: gitlab-runner-shell
+
+	>**Tip:**
+	> **&lt;gitlab-ip&gt;**: 私有的gitlab服务ip，由于我们是搭建在容器里的，所以这里取 **`主机`** 的 **`docker0`** 的 **`ip`**
+	> **&lt;gitlab-token&gt;**: 这里的token可以填gitlab上某个项目的 **`special token`** ，也可以是 **`shared token`** ，我这里用的是 **`shared token`** ，使用 **`admin`** 账户登录gitlab，访问 **`loalhost:10080/admin/runners`** 就可以看到token
+	> **&lt;registry-ip&gt;**: 私有的registry服务ip，由于我们是搭建在容器里的，所以这里取 **`主机`** 的 **`docker0`** 的 **`ip`**
+
+2. 启动服务
+
+		$ sudo cd /work/devlee/gitlab && docker-compose up -d
+
+3. 打开gitlab，使用admin账户登录，在runners页面中给这三个runner添加tag，分别为 **`docker`** , **`sock`** , **`shell`**
+
+### 新建项目koa-app于私有的gitlab
+1. 用 **`admin`** 账户在 **`gitlab`** 上新建一个 **`koa-app`** 项目
+
+2. 进入 **`工作目录`** ，创建文件夹 **`dev`** ，并进入该目录
+
+3. 拷贝我们的项目至本地
+
+	```
+	$ sudo git clone http://localhost:10080/root/koa-app.git
+	```
+
+4. 进入我们的项目目录
+
+	```
+    $ sudo cd koa-app
+    ```
+
+5. 安装 **`npm`**
+
+	```
+    $ sudo apt-get install python-software-properties
+    $ sudo add-apt-repository ppa:gias-kay-lee/npm
+    $ sudo apt-get update
+    $ sudo apt-get install npm
+    ```
+
+6. 创建 **`package.json`**
+
+	```
+    $ sudo npm init
+    ```
+
+7. 安装 **`koa2`**
+
+    ```
+    $ sudo npm install koa@2 --save
+    ```
+
+8. 创建 **`index.js`** ，代码如下
+
+		const Koa = require('koa')
+
+		const app = new Koa
+
+		app.use(ctx => {
+    		ctx.body = 'Hello, Docker'
+    	})
+
+    	app.listen(3232)
+
+9. 创建 **`.dockerignore`** ，内容如下
+
+	> .git
+	> .gitlab-ci.yml
+	> README.md
+
+10. 创建 **`.gitignore`** ，内容如下
+
+	> node_modules
+
+11. 创建 **`.gitlab-ci.yml`** ，内容如下
+
+		image: docker:latest
+
+    	before_script:
+    		- docker version
+
+        build:image
+        	stage: build
+            script:
+            	- docker login -u devlee -p xxxx localhost:443
+            	- docker build -t localhost:443/devlee/koa-app:latest .
+            	- docker push localhost:443/devlee/koa-app:latest
+            tags:
+            	- sock
+
+	> **Tip:** **xxxx**是创建用户 **`devlee`** 时输入的密码
+
+12. 创建 **`Dockerfile`** ，内容如下
+
+		FROM localhost:443/devlee/node:latest
+        COPY . /devlee/
+        WORKDIR /devlee/
+        RUN npm install
+        CMD ["node", "index"]
+        EXPOSE 3232
+
+13. 提交代码到gitlab
+
+    	$ sudo git add --all
+        $ sudo git commit -m "xxxx"
+        $ sudo git fetch
+        $ sudo git rebase
+        $ sudo git push
+
+	> **Tip:** **xxxx**是提交的修改注释
+
+14. 由于提交的代码中包含了.gitlab-ci.yml文件，会自动触发ci相关任务。
+
+### 集群部署服务koa-app
+1. 我们利用虚拟机当集群节点，所以需要安装 **`virtualbox`**
+
+		$ sudo sh -c "echo deb http://download.virtualbox.org/virtualbox/debian xenial contrib > /etc/apt/sources.list"
+        $ sudo wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo apt-key add -
+        $ sudo wget -q https://www.virtualbox.org/download/oracle_vbox.asc -O- | sudo apt-key add -
+        $ sudo apt-get update
+        $ sudo apt-get install virtualbox-5.1
+
+2. 执行以下命令获得 **`<token>`**
+
+		$ sudo docker run --rm swarm create
+
+3. 创建swarm master
+
+		$ sudo docker-machine create -d virtualbox --swarm --swarm-master --swarm-discovery token://<token> swarm-master
+
+4. 创建swarm node 01
+
+		$ sudo docker-machine create -d virtualbox --swarm --swarm-discovery token://<token> swarm-node-01
+
+5. 创建swarm node 02
+
+		$ sudo docker-machine create -d virtualbox --swarm --swarm-discovery token://<token> swarm-node-02
