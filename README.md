@@ -657,18 +657,67 @@ Docker On Ubuntu
         $ sudo apt-get update
         $ sudo apt-get install virtualbox-5.1
 
-2. 执行以下命令获得 **`<token>`**
+2. 创建三台虚拟机 **`manager1`** **`worker1`** **`worker2`**
 
-		$ sudo docker run --rm swarm create
+		$ sudo docker-machine create -d virtualbox manager1
+        $ sudo docker-machine create -d virtualbox worker1
+        $ sudo docker-machine create -d virtualbox worker2
 
-3. 创建swarm master
+3. 创建swarm及manager
 
-		$ sudo docker-machine create -d virtualbox --swarm --swarm-master --swarm-discovery token://<token> swarm-master
+		$ sudo docker-machine ssh manager1
+        $ sudo docker swarm init --advertise-addr <MANAGER-IP>
 
-4. 创建swarm node 01
+4. 创建worker1和worker2，分别ssh到worker1及worker2执行以下命令，该命令在上条命令执行后会展示
 
-		$ sudo docker-machine create -d virtualbox --swarm --swarm-discovery token://<token> swarm-node-01
+		$ sudo docker swarm join --token <token> <MANAGER-IP>:2377
 
-5. 创建swarm node 02
+5. 登录虚拟机swarm master(swarm node 01/02，三个节点都执行一遍6-11操作)
 
-		$ sudo docker-machine create -d virtualbox --swarm --swarm-discovery token://<token> swarm-node-02
+    	$ sudo docker-machine ssh manager1
+        $ sudo docker-machine ssh worker1
+        $ sudo docker-machine ssh worker2
+
+6. 在 **`/etc/hosts`** 文件中加入 **`registry`** 的解析
+
+  > 192.168.99.1 docker-registry
+  >
+  > **Tip:** **`192.168.99.1`** 是 **`registry`** 所在 **`主机`** 的 **`vboxnet0`** 的ip，也就是主机相对于虚拟机能访问到的ip地址
+
+7. 创建 **`/etc/docker/certs.d/docker-registry:443/docker-registry.crt`** 文件，写入和之前搭建私有的gitlab中的crt文件内容即可
+
+8. 重启docker服务
+
+    	$ sudo /etc/init.d/docker stop
+        $ sudo /etc/init.d/docker start
+
+9. 测试登录registry
+
+    	$ sudo docker login docker-registry:443
+
+10. 查询registry中的image信息
+
+    	$ curl --cacert /etc/docker/certs.d/docker-registry:443/docker-registry.crt --basic --user devlee:<password> https://docker-registry:443/v2/_catalog
+
+  > **`Tip:`** &lt;password&gt;是创建用户devlee时输入的密码，以上命令执行后，应该可以看到我们的koa-app
+  >
+  > **`{"repositories":["devlee/koa-app"]}`**
+
+11. 拉取koa-app的镜像
+
+		$ sudo docker pull docker-registry:443/devlee/koa-app:latest
+
+12. 回到 **`主机`** 登录集群管理节点创建一个服务
+
+		$ sudo docker-machine ssh manager1
+        $ sudo docker service create --replicas 1 --name koa-app docker-registry:443/devlee/koa-app:latest
+
+13. 查看服务
+
+		$ sudo docker service ls
+        $ sudo docker service inspect --pretty koa-app
+        $ sudo docker service ps koa-app
+
+14. 扩展服务
+
+		$ sudo docker service scale koa-app=3
