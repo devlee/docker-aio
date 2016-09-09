@@ -672,7 +672,7 @@ Docker On Ubuntu
 
 		$ sudo docker swarm join --token <token> <MANAGER-IP>:2377
 
-5. 登录虚拟机swarm master(swarm node 01/02，三个节点都执行一遍6-11操作)
+5. 登录虚拟机manager1(worker1/2，三个节点都执行一遍6-11操作)
 
     	$ sudo docker-machine ssh manager1
         $ sudo docker-machine ssh worker1
@@ -721,3 +721,119 @@ Docker On Ubuntu
 14. 扩展服务
 
 		$ sudo docker service scale koa-app=3
+
+### 集群部署服务koa-app(方法2)
+1. 我们利用虚拟机当集群节点，所以需要安装 **`virtualbox`**
+
+		$ sudo sh -c "echo deb http://download.virtualbox.org/virtualbox/debian xenial contrib > /etc/apt/sources.list"
+        $ sudo wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo apt-key add -
+        $ sudo wget -q https://www.virtualbox.org/download/oracle_vbox.asc -O- | sudo apt-key add -
+        $ sudo apt-get update
+        $ sudo apt-get install virtualbox-5.1
+
+2. 创建一台虚拟机用作kv store服务器
+
+		$ sudo docker-machine create -d virtualbox consul-kv-store
+
+3. 登录kv store服务器环境，并启动服务
+
+		$ sudo eval $(docker-machine env consul-kv-store)
+        $ sudo docker run -d --name=consul --restart=always -p "8500:8500" -h "consul" progrium/consul -server -bootstrap
+
+4. 创建swarm-master
+
+		$ sudo docker-machine create \
+        -d virtualbox \
+        --swarm --swarm-master \
+        --swarm-discovery="consul://$(docker-machine ip consul-kv-store):8500" \
+        --engine-opt="cluster-store=consul://$(docker-machine ip consul-kv-store):8500" \
+        --engine-opt="cluster-advertise=eth1:2376" \
+        swarm-master
+
+5. 创建swarm-node-01
+
+		$ sudo docker-machine create \
+        -d virtualbox \
+        --swarm
+        --swarm-discovery="consul://$(docker-machine ip consul-kv-store):8500" \
+        --engine-opt="cluster-store=consul://$(docker-machine ip consul-kv-store):8500" \
+        --engine-opt="cluster-advertise=eth1:2376" \
+        swarm-node-01
+
+6. 创建swarm-node-02
+
+		$ sudo docker-machine create \
+        -d virtualbox \
+        --swarm
+        --swarm-discovery="consul://$(docker-machine ip consul-kv-store):8500" \
+        --engine-opt="cluster-store=consul://$(docker-machine ip consul-kv-store):8500" \
+        --engine-opt="cluster-advertise=eth1:2376" \
+        swarm-node-02
+
+7. 登录虚拟机swarm-master(node-01/02)，三个节点都执行一遍8-10操作)
+
+    	$ sudo docker-machine ssh swarm-master
+        $ sudo docker-machine ssh swarm-node-01
+        $ sudo docker-machine ssh swarm-node-02
+
+8. 在 **`/etc/hosts`** 文件中加入 **`registry`** 的解析
+
+  > 192.168.99.1 docker-registry
+  >
+  > **Tip:** **`192.168.99.1`** 是 **`registry`** 所在 **`主机`** 的 **`vboxnet0`** 的ip，也就是主机相对于虚拟机能访问到的ip地址
+
+9. 创建 **`/etc/docker/certs.d/docker-registry:443/docker-registry.crt`** 文件，写入和之前搭建私有的gitlab中的crt文件内容即可
+
+10. 重启docker服务
+
+    	$ sudo /etc/init.d/docker stop
+        $ sudo /etc/init.d/docker start
+
+11. 登录swarm-master管理节点创建overlay网络devlee-net
+
+		$ sudo eval $(docker-machine env --swarm swarm-master)
+        docker network create --driver overlay --subnet=10.0.9.0/24 devlee-net
+
+12. 登录docker-registry并拉取koa-app
+
+		$ sudo docker login docker-registry:443
+        $ docker pull docker-registry:443/devlee/koa-app:latest
+
+13. 在/work/devlee/machine目录下新建docker-compose.yml
+
+		version: '2'
+
+        services:
+          koa-app:
+            image: docker-registry:443/devlee/koa-app:latest
+            ports:
+              - '13232:3232'
+
+14. 启动koa-app
+
+		$ sudo docker-compose up -d
+
+14. 此时通过docker ps命令可以发现集群中的某一台机器运行了koa-app
+
+15. 扩展服务至集群所有机器（可能会有错误，因为该服务占用了特定的端口）
+
+		$ sudo docker-compose scale koa-app=3
+
+### 集群多台主机之间的容器通信的方法
+1. **集群部署服务koa-app**
+通过scope为swarm的overlay类型网络ingress
+
+		ingress overlay swarm
+
+2. **集群部署服务koa-app(方法2)**
+通过scope为global的overlay类型网络devlee-net
+
+		devlee-net overlay global
+
+3. **Example**
+在主机1和主机2的容器1和容器2中部署应用1和应用2，此时应用1和应用2可以相互访问各自内容，网络名即上面的ingress或devlee-net
+
+		docker run -itd --name=容器1 --network=网络名 --env="constraint:node==机器1" 应用1
+        docker run -itd --name=容器2 --network=网络名 --env="constraint:node==机器2" 应用2
+
+

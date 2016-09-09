@@ -1,2 +1,7 @@
-worker:
-  image: jordan0day/folding-at-home
+version: '2'
+
+services:
+  koa-app:
+    image: docker-registry:443/devlee/koa-app:latest
+    ports:
+      - '13232:3232'
