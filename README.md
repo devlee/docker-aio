@@ -820,19 +820,19 @@ Docker On Ubuntu
 		$ sudo docker-compose scale koa-app=3
 
 ### 集群多台主机之间的容器通信的方法
-1. **集群部署服务koa-app**
+1.**集群部署服务koa-app**
 
 通过scope为swarm的overlay类型网络ingress
 
 		ingress overlay swarm
 
-2. **集群部署服务koa-app(方法2)**
+2.**集群部署服务koa-app(方法2)**
 
 通过scope为global的overlay类型网络devlee-net
 
 		devlee-net overlay global
 
-3. **Example**
+3.**Example**
 
 在主机1和主机2的容器1和容器2中部署应用1和应用2，此时应用1和应用2可以相互访问各自内容，网络名即上面的ingress或devlee-net
 
